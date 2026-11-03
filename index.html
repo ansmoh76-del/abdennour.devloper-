@@ -190,7 +190,6 @@ section { padding: 90px 0; }
 .work-info { padding: 22px; }
 .work-info h3 { font-size: 1.15rem; margin-bottom: 8px; color: var(--white); }
 .work-info p { color: rgba(255,255,255,0.6); font-size: 0.9rem; }
-.loading { text-align: center; padding: 40px; color: var(--gray); }
 
 .contact { background: var(--off-white); text-align: center; }
 .contact-box {
@@ -349,7 +348,25 @@ footer strong { color: var(--gold); }
             <p>نماذج حقيقية من تصاميمي</p>
         </div>
         <div class="works-grid" id="worksGrid">
-            <div class="loading" id="worksLoading">جاري تحميل الأعمال...</div>
+            <!-- الأعمال مكتوبة هنا مباشرة -->
+            <div class="work-card">
+                <div class="work-image">
+                    <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" alt="إيمن فاست فود" onerror="this.parentElement.textContent='🍔'">
+                </div>
+                <div class="work-info">
+                    <h3>إيمن فاست فود</h3>
+                    <p>موقع وجبات سريعة مع سلة تسوق وربط واتساب.</p>
+                </div>
+            </div>
+            <div class="work-card">
+                <div class="work-image">
+                    <img src="https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=800&q=80" alt="أوس ستايل" onerror="this.parentElement.textContent='👕'">
+                </div>
+                <div class="work-info">
+                    <h3>أوس ستايل</h3>
+                    <p>متجر ملابس عصرية مع كتالوغ منتجات وتصميم أنيق.</p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -376,6 +393,7 @@ footer strong { color: var(--gold); }
 <div class="modal" id="addModal">
     <div class="modal-box">
         <h3>إضافة عمل جديد</h3>
+        <p style="font-size: 13px; color: #777; margin-bottom: 15px;">هذه الأداة تولد كود HTML. انسخه والصقه في <code>index.html</code> مكان التعليق.</p>
         <label>اسم المشروع</label>
         <input type="text" id="workName" placeholder="مثال: إيمن فاست فود">
         <label>وصف المشروع</label>
@@ -383,21 +401,19 @@ footer strong { color: var(--gold); }
         <label>رابط الصورة (اختياري)</label>
         <input type="text" id="workImage" placeholder="https://...">
         <div class="modal-actions">
-            <button class="btn btn-gold" id="saveWorkBtn">حفظ</button>
+            <button class="btn btn-gold" id="generateCodeBtn">توليد الكود</button>
             <button class="btn btn-dark" id="cancelModalBtn">إلغاء</button>
+        </div>
+        <div id="generatedCodeBox" style="display:none; margin-top:20px;">
+            <label>انسخ هذا الكود:</label>
+            <textarea id="generatedCode" rows="8" readonly style="font-family: monospace; font-size: 12px; direction: ltr; text-align: left;"></textarea>
         </div>
     </div>
 </div>
 
-<div class="toast" id="toast">تم الحفظ</div>
+<div class="toast" id="toast">تم</div>
 
 <script>
-const JSONBIN_CONFIG = {
-    accessKey: "$2a$10$gqAjJd9UTRoDBkrVRX8ZXOOEDVY/.hFSpym.VK3IZHB/rcer9LK6K",
-    binId: "6ae734d9ffd5d160539d2782",
-    baseUrl: "https://api.jsonbin.io/v3/b"
-};
-
 window.addEventListener('load', () => {
     setTimeout(() => document.getElementById('loader').classList.add('hidden'), 600);
 });
@@ -451,70 +467,12 @@ function clearForm() {
     document.getElementById('workName').value = '';
     document.getElementById('workDesc').value = '';
     document.getElementById('workImage').value = '';
+    document.getElementById('generatedCodeBox').style.display = 'none';
+    document.getElementById('generatedCode').value = '';
 }
 
-/* ===== JSONBin API with CORS Proxy ===== */
-const PROXY = "https://api.allorigins.win/raw?url=";
-
-async function loadWorks() {
-    try {
-        const target = `${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}/latest`;
-        const res = await fetch(PROXY + encodeURIComponent(target), {
-            headers: { "X-Access-Key": JSONBIN_CONFIG.accessKey }
-        });
-        if (!res.ok) throw new Error("Load failed");
-        const data = await res.json();
-        return data.record.works || [];
-    } catch (err) {
-        console.error("Load error:", err);
-        return [];
-    }
-}
-
-async function saveWorks(works) {
-    try {
-        const target = `${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`;
-        const res = await fetch(PROXY + encodeURIComponent(target), {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Access-Key": JSONBIN_CONFIG.accessKey
-            },
-            body: JSON.stringify({ works: works })
-        });
-        if (!res.ok) throw new Error("Save failed");
-        return true;
-    } catch (err) {
-        console.error("Save error:", err);
-        return false;
-    }
-}
-
-async function displayWorks() {
-    const grid = document.getElementById('worksGrid');
-    const works = await loadWorks();
-    if (!works || works.length === 0) {
-        grid.innerHTML = '<div class="loading">لا توجد أعمال بعد. أضف أول عمل!</div>';
-        return;
-    }
-    grid.innerHTML = works.map(w => `
-        <div class="work-card">
-            <div class="work-image">
-                ${w.image ? `<img src="${w.image}" alt="${w.name}" onerror="this.parentElement.textContent='🖥️'">` : '🖥️'}
-            </div>
-            <div class="work-info">
-                <h3>${escapeHTML(w.name)}</h3>
-                <p>${escapeHTML(w.desc)}</p>
-            </div>
-        </div>
-    `).join('');
-}
-
-function escapeHTML(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-document.getElementById('saveWorkBtn').addEventListener('click', async () => {
+/* ===== توليد كود HTML للعمل ===== */
+document.getElementById('generateCodeBtn').addEventListener('click', () => {
     const name = document.getElementById('workName').value.trim();
     const desc = document.getElementById('workDesc').value.trim();
     const image = document.getElementById('workImage').value.trim();
@@ -524,25 +482,20 @@ document.getElementById('saveWorkBtn').addEventListener('click', async () => {
         return;
     }
 
-    const btn = document.getElementById('saveWorkBtn');
-    btn.textContent = 'جاري الحفظ...';
-    btn.disabled = true;
+    const code = `
+            <div class="work-card">
+                <div class="work-image">
+                    ${image ? `<img src="${image}" alt="${name}" onerror="this.parentElement.textContent='🖥️'">` : '🖥️'}
+                </div>
+                <div class="work-info">
+                    <h3>${name}</h3>
+                    <p>${desc}</p>
+                </div>
+            </div>`;
 
-    const works = await loadWorks();
-    works.push({ name, desc, image });
-    const ok = await saveWorks(works);
-
-    btn.textContent = 'حفظ';
-    btn.disabled = false;
-
-    if (ok) {
-        showToast('تمت إضافة العمل بنجاح');
-        addModal.classList.remove('active');
-        clearForm();
-        displayWorks();
-    } else {
-        showToast('فشل الحفظ، تحقق من الاتصال');
-    }
+    document.getElementById('generatedCode').value = code;
+    document.getElementById('generatedCodeBox').style.display = 'block';
+    showToast('تم توليد الكود، انسخه');
 });
 
 let toastTimer;
@@ -553,8 +506,6 @@ function showToast(msg) {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
-
-displayWorks();
 </script>
 </body>
 </html>
